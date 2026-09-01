@@ -560,32 +560,104 @@ pub struct InputRichBlockMap {
     pub caption: Option<RichBlockCaption>,
 }
 
+/// Serializers adding the `type` discriminator that the Bot API requires on the media
+/// objects embedded in rich blocks.
+///
+/// [`InputRichMessageMediaKind`] gets the discriminator from its enum tag, but blocks like
+/// [`InputRichBlockVideo`] hold the concrete media struct, so it has to be added here.
+mod tagged_media {
+    use serde::{Serialize, Serializer};
+
+    use crate::input_media::{
+        InputMediaAnimation, InputMediaAudio, InputMediaPhoto, InputMediaVideo, InputMediaVoiceNote,
+    };
+
+    #[derive(Serialize)]
+    struct Tagged<'a, T> {
+        #[serde(rename = "type")]
+        type_field: &'static str,
+        #[serde(flatten)]
+        media: &'a T,
+    }
+
+    pub fn animation<S: Serializer>(
+        media: &InputMediaAnimation,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        Tagged {
+            type_field: "animation",
+            media,
+        }
+        .serialize(serializer)
+    }
+
+    pub fn audio<S: Serializer>(media: &InputMediaAudio, serializer: S) -> Result<S::Ok, S::Error> {
+        Tagged {
+            type_field: "audio",
+            media,
+        }
+        .serialize(serializer)
+    }
+
+    pub fn photo<S: Serializer>(media: &InputMediaPhoto, serializer: S) -> Result<S::Ok, S::Error> {
+        Tagged {
+            type_field: "photo",
+            media,
+        }
+        .serialize(serializer)
+    }
+
+    pub fn video<S: Serializer>(media: &InputMediaVideo, serializer: S) -> Result<S::Ok, S::Error> {
+        Tagged {
+            type_field: "video",
+            media,
+        }
+        .serialize(serializer)
+    }
+
+    pub fn voice_note<S: Serializer>(
+        media: &InputMediaVoiceNote,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        Tagged {
+            type_field: "voice_note",
+            media,
+        }
+        .serialize(serializer)
+    }
+}
+
 #[apply(apistruct!)]
 pub struct InputRichBlockAnimation {
+    #[serde(serialize_with = "tagged_media::animation")]
     pub animation: InputMediaAnimation,
     pub caption: Option<RichBlockCaption>,
 }
 
 #[apply(apistruct!)]
 pub struct InputRichBlockAudio {
+    #[serde(serialize_with = "tagged_media::audio")]
     pub audio: InputMediaAudio,
     pub caption: Option<RichBlockCaption>,
 }
 
 #[apply(apistruct!)]
 pub struct InputRichBlockPhoto {
+    #[serde(serialize_with = "tagged_media::photo")]
     pub photo: InputMediaPhoto,
     pub caption: Option<RichBlockCaption>,
 }
 
 #[apply(apistruct!)]
 pub struct InputRichBlockVideo {
+    #[serde(serialize_with = "tagged_media::video")]
     pub video: InputMediaVideo,
     pub caption: Option<RichBlockCaption>,
 }
 
 #[apply(apistruct!)]
 pub struct InputRichBlockVoiceNote {
+    #[serde(serialize_with = "tagged_media::voice_note")]
     pub voice_note: InputMediaVoiceNote,
     pub caption: Option<RichBlockCaption>,
 }
